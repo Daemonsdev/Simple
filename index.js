@@ -44,7 +44,7 @@ const logger = require('./utils/logger');
 
 global.heru = {
     ENDPOINT: "https://deku-rest-api.gleeze.com",
-    admin: config.ADMINBOT,
+    admin: new Set(config.ADMINBOT),
     prefix: config.PREFIX,
     botName: config.BOTNAME
 };
@@ -121,8 +121,7 @@ function startBot(api) {
                 }
 
                 if (message === global.heru.prefix) {
-                    return reply(
-                        `Type ${global.heru.prefix}help to view available commands.`,
+                    return reply(`🌟 Hello there! Thats my prefix! if you want view all information and command details just Type ${global.heru.prefix}help to view available commands.`,
                         event
                     );
                 }
@@ -140,8 +139,8 @@ function startBot(api) {
                 }
 
                 if (command.config.role === 1 && !global.heru.admin.has(event.senderID)) {
-                    react("⚠️", event);
-                    return reply(`❗ You don't have permission to use the command "${commandName}".`, event);
+    react("⚠️", event);
+    return reply(`❗ You don't have permission to use the command! name "${commandName}"`, event);
                 }
 
                 if (!global.handle) global.handle = {};
