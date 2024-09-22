@@ -17,7 +17,7 @@ module.exports = {
     const commandsPerPage = 5;
     const totalPages = Math.ceil(files.length / commandsPerPage);
 
-    let helpMessage = `𝙰𝚟𝚊𝚒𝚕𝚊𝚋𝚕𝚎 𝙲𝚘𝚖𝚖𝚊𝚗𝚍𝚜:\n╭─╼━━━━━━━━╾─╮\n`;
+    let helpMessage = `Available Commands:\n╭─╼━━━━━━━━╾─╮\n`;
 
     if (args[0] && args[0].toLowerCase() === 'all') {
       files.forEach(file => {

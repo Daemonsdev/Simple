@@ -29,10 +29,10 @@ module.exports = {
 
     if (isNaN(modelIndex) || modelIndex < 0 || modelIndex >= models.length || !question) {
       react("⚠️", event);
-      return reply(
+      return reply(global.formatFont(
         `Usage: modelai [model_number] [question]\nAvailable models:\n━━━━━━━━━━━━━━━\n${models.map((model, i) => `${i + 1}. ${model}`).join('\n')}`,
         event
-      );
+      ));
     }
 
     const selectedModel = models[modelIndex];
@@ -41,9 +41,9 @@ module.exports = {
       react("⏳", event);
 
       const searchingMessage = await new Promise(resolve => {
-        api.sendMessage("⏳ Searching...", event.threadID, (err, info) => {
+        api.sendMessage(global.formatFont("⏳ Searching...", event.threadID, (err, info) => {
           resolve(info);
-        });
+        }));
       });
 
       const apiUrl = `https://hiroshi-api.onrender.com/ai/xyz?ask=${encodeURIComponent(question)}&model=${encodeURIComponent(selectedModel)}`;
@@ -52,18 +52,18 @@ module.exports = {
       const answer = response.data?.response || "I couldn't fetch a response.";
       
       react("✅", event);
-      await api.editMessage(
-        `⚙️ 𝗠𝗢𝗗𝗘𝗟𝗔𝗜(${selectedModel})\n━━━━━━━━━━━━━━━\n${answer}`,
+      await api.editMessage(global.formatFont(
+        `⚙️ 𝗠𝗢𝗗𝗘𝗟𝗔𝗜 (${selectedModel})\n━━━━━━━━━━━━━━━\n${answer}`,
         searchingMessage.messageID
-      );
+      ));
 
     } catch (error) {
       react("⚠️", event);
 
-      await api.editMessage(
-        `❌ Error: ${error.message}`,
+      await api.editMessage(global.formatFont(
+        `❌ ${error.message}`,
         searchingMessage.messageID
-      );
+      ));
     }
   }
 };

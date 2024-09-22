@@ -1,190 +1,204 @@
-const login = require('fca-kaito');
-const fs = require('fs');
 const axios = require('axios');
-const path = require("path");
-require("./utils/index");
+const fs = require('fs');
+const path = require('path');
+require('./utils/index');
 const config = require('./config.json');
-const readline = require('readline');
-let appstate;
+const text = require('fontstyles');
 
-// Try to load appstate.json, or prompt login if it doesn't exist
+// Define available font styles
+const font = {
+  thin: msg => text.thin(msg),
+  italic: msg => text.italic(msg),
+  bold: msg => text.bold(msg),
+  underline: msg => text.underline(msg),
+  strike: msg => text.strike(msg),
+  monospace: msg => text.monospace(msg),
+  roman: msg => text.roman(msg),
+  bubble: msg => text.bubble(msg),
+  squarebox: msg => text.squarebox(msg),
+  origin: msg => text.origin(msg),
+};
+
+
+let userFontSettings = { enabled: true, currentFont: 'thin' };
+
+function formatFont(msg) {
+  if (!userFontSettings.enabled || userFontSettings.currentFont === 'origin') {
+    return msg;
+  }
+  return font[userFontSettings.currentFont](msg);
+}
+
+global.formatFont = formatFont;
+// Load appstate for login
+let appstate;
 try {
   appstate = require('./appstate.json');
 } catch (err) {
-  console.log("No appstate detected. Please sign in to generate a new session.");
-
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
-  });
-
-  rl.question('Enter Facebook Email: ', (email) => {
-    rl.question('Enter Facebook Password: ', (password) => {
-      rl.close();
-      
-      login({ email: email, password: password }, (err, api) => {
-        if (err) {
-          console.error('Login failed:', err);
-          return;
-        }
-        
-        console.log('Login successful! Saving session to appstate.json...');
-        
-        // Save the appstate (session) to appstate.json
-        fs.writeFileSync('./appstate.json', JSON.stringify(api.getAppState(), null, 2));
-        
-        startBot(api);  // Start the bot with the new session
-      });
-    });
-  });
-  return; // Exit after login attempt
+  console.log(formatFont("No appstate detected. Please sign in to generate a new session."));
+  return;
 }
 
 const logger = require('./utils/logger');
 
+// Global settings for Heru bot
 global.heru = {
-    ENDPOINT: "https://deku-rest-api.gleeze.com",
-    admin: new Set(config.ADMINBOT),
-    prefix: config.PREFIX,
-    botName: config.BOTNAME
+  ENDPOINT: "https://deku-rest-api.gleeze.com",
+  admin: new Set(config.ADMINBOT),
+  prefix: config.PREFIX,
+  botName: config.BOTNAME
 };
 
-// Load commands from the "src/cmds" directory
+// Load commands
 const commands = {};
-const commandPath = path.join(__dirname, "src", "cmds");
-
+const commandPath = path.join(__dirname, 'src', 'cmds');
 try {
   const files = fs.readdirSync(commandPath);
   files.forEach(file => {
-    if (file.endsWith(".js")) {
+    if (file.endsWith('.js')) {
       try {
         const script = require(path.join(commandPath, file));
         commands[script.config.name] = script;
-        logger.logger(`Loaded command: ${script.config.name}`);
+        logger.logger(formatFont(`Loaded command: ${script.config.name}`));
       } catch (e) {
-        logger.warn(`Failed to load command: ${file}\nReason: ${e.message}`);
+        logger.warn(formatFont(`Failed to load command: ${file}\nReason: ${e.message}`));
       }
     }
   });
 } catch (err) {
-  logger.warn(`Error reading command directory: ${err.message}`);
+  logger.warn(formatFont(`Error reading command directory: ${err.message}`));
 }
 
-// Log in using appstate
+// FCA login
+const login = require('fca-kaito');
 login({ appState: appstate }, (err, api) => {
-    if (err) {
-        console.error('Error logging in:', err);
-        return;
-    }
-
-    startBot(api);  // Start the bot when logged in successfully
+  if (err) {
+    console.error(formatFont('Error logging in:'), err);
+    return;
+  }
+  startBot(api);
 });
 
+// Start bot and listen to messages
 function startBot(api) {
-    console.log('Successfully logged in!');
+  console.log(formatFont('Successfully logged in!'));
+  
+  api.listenMqtt(async (err, event) => {
+    if (err) {
+      console.error(formatFont('Error in MQTT listener:'), err);
+      return;
+    }
 
-    api.listenMqtt(async (err, event) => {
-        if (err) {
-            console.error('Error in MQTT listener:', err);
-            return;
+    if (event.type === "message" || event.type === "message_reply") {
+      const message = event.body;
+      const uid = event.senderID;
+      const dateNow = Date.now();
+      let commandName = message.split(' ')[0].toLowerCase();
+      const args = message.split(' ').slice(1);
+      const isPrefixed = commandName.startsWith(global.heru.prefix);
+
+      if (isPrefixed) {
+        commandName = commandName.slice(global.heru.prefix.length).toLowerCase();
+      }
+
+      const command = commands[commandName];
+      const react = (emoji, event) => {
+        api.setMessageReaction(emoji, event.messageID, () => {}, true);
+      };
+      const reply = (text, event) => {
+        api.sendMessage(formatFont(text), event.threadID, event.messageID);
+      };
+
+      // Handle font commands
+      if (!command) {
+        if (commandName === 'font') {
+          if (args[0] === 'list') {
+            const availableFonts = Object.keys(font).join(', ');
+            return reply(`Available fonts: ${availableFonts}`, event);
+          }
+          if (args[0] === 'change' && args[1] && font[args[1]]) {
+            userFontSettings.currentFont = args[1];
+            return reply(`Font changed to: ${args[1]}`, event);
+          }
+          if (args[0] === 'enable') {
+            userFontSettings.enabled = true;
+            return reply('Font styling enabled.', event);
+          }
+          if (args[0] === 'disable') {
+            userFontSettings.enabled = false;
+            return reply('Font styling disabled.', event);
+          }
+          return reply('Invalid font command. Usage: font list, font change <fontName>, font enable, or font disable.', event);
         }
 
-        if (event.type === "message" || event.type === "message_reply") {
-            const message = event.body;
-            const uid = event.senderID;
-
-            const dateNow = Date.now();
-            let commandName = message.split(' ')[0].toLowerCase();
-            const args = message.split(' ').slice(1);
-
-            const isPrefixed = commandName.startsWith(global.heru.prefix);
-            if (isPrefixed) {
-                commandName = commandName.slice(global.heru.prefix.length).toLowerCase();
-            }
-
-            const command = commands[commandName];
-
-            const react = (emoji, event) => {
-                api.setMessageReaction(emoji, event.messageID, () => {}, true);
-            };
-
-            const reply = (text, event) => {
-                api.sendMessage(text, event.threadID, event.messageID);
-            };
-
-            if (!command) {
-                if (message === "prefix") {
-                    return reply(
-                        `⚙️ My prefix is:  》 ${global.heru.prefix} 《`,
-                        event
-                    );
-                }
-
-                if (message === global.heru.prefix) {
-                    return reply(`🌟 Hello there! Thats my prefix! if you want view all information and command details just Type ${global.heru.prefix}help to view available commands.`,
-                        event
-                    );
-                }
-            }
-
-            if (command) {
-                if (command.config.prefix !== false && !isPrefixed) {
-                    react("⚠️", event);
-                    return reply(`⚒️ Command "${commandName}" needs a prefix.`, event);
-                }
-
-                if (command.config.prefix === false && isPrefixed) {
-                    react("⚠️", event);
-                    return reply(`⚒️ Command "${commandName}" doesn't need a prefix.`, event);
-                }
-
-                if (command.config.role === 1 && !global.heru.admin.has(event.senderID)) {
-    react("⚠️", event);
-    return reply(`❗ You don't have permission to use the command! name "${commandName}"`, event);
-                }
-
-                if (!global.handle) global.handle = {};
-                if (!global.handle.cooldown) global.handle.cooldown = new Map();
-
-                if (!global.handle.cooldown.has(commandName)) {
-                    global.handle.cooldown.set(commandName, new Map());
-                }
-
-                const timeStamps = global.handle.cooldown.get(commandName);
-                const expiration = command.config.cooldown * 1000 || 3000;
-
-                if (timeStamps.has(event.senderID) && dateNow < timeStamps.get(event.senderID) + expiration) {
-                    const cooldownTime = (timeStamps.get(event.senderID) + expiration - dateNow) / 1000;
-                    return reply(`⏳ Command is still on cooldown for ${cooldownTime.toFixed(1)} second(s).`, event);
-                }
-
-                timeStamps.set(event.senderID, dateNow);
-
-                try {
-                    await command.run(api, event, args, reply, react);
-                } catch (error) {
-                    react("⚠️", event);
-                    reply(`Error executing command '${commandName}': ${error.message}`, event);
-                }
-            }
-        } else if (event.type === "event" && event.logMessageType === "log:subscribe") {
-            const { threadID } = event;
-            const threadInfo = await api.getThreadInfo(threadID);
-            let { threadName, participantIDs } = threadInfo;
-
-            if (event.logMessageData.addedParticipants.some(i => i.userFbId == api.getCurrentUserID())) {
-                api.changeNickname(
-                    `${global.heru.botName} • » ${global.heru.prefix} «`,
-                    event.threadID,
-                    api.getCurrentUserID()
-                );
-
-                api.shareContact(
-                    `✅ Connected successfully. Type "${global.heru.prefix}help" to see all commands.`,
-                    api.getCurrentUserID(),
-                    event.threadID
-                );
-            }
+        // Handle prefix information
+        if (message === 'prefix') {
+          return reply(`⚙️ My prefix is: 》 ${global.heru.prefix} 《`, event);
         }
-    });
+        if (message === global.heru.prefix) {
+          return reply(`Hello there! That's my prefix. Type ${global.heru.prefix}help to see all commands.`, event);
+        }
+      }
+
+      // Handle valid commands
+      if (command) {
+        if (command.config.prefix !== false && !isPrefixed) {
+          react('⚠️', event);
+          return reply(`The Command "${commandName}" needs a prefix.`, event);
+        }
+        if (command.config.prefix === false && isPrefixed) {
+          react('⚠️', event);
+          return reply(`The command "${commandName}" doesn't need a prefix.`, event);
+        }
+        if (command.config.role === 1 && !global.heru.admin.has(event.senderID)) {
+          react('⚠️', event);
+          return reply(`You are not authorized to use the command "${commandName}".`, event);
+        }
+
+        // Handle command cooldown
+        if (!global.handle) global.handle = {};
+        if (!global.handle.cooldown) global.handle.cooldown = new Map();
+
+        if (!global.handle.cooldown.has(commandName)) {
+          global.handle.cooldown.set(commandName, new Map());
+        }
+
+        const timeStamps = global.handle.cooldown.get(commandName);
+        const expiration = command.config.cooldown * 1000 || 3000;
+
+        if (timeStamps.has(event.senderID) && dateNow < timeStamps.get(event.senderID) + expiration) {
+          const cooldownTime = (timeStamps.get(event.senderID) + expiration - dateNow) / 1000;
+          return reply(`⏳ Command still on cooldown for ${cooldownTime.toFixed(1)} second(s).`, event);
+        }
+
+        timeStamps.set(event.senderID, dateNow);
+
+        // Execute the command
+        try {
+          await command.run(api, event, args, reply, react);
+        } catch (error) {
+          react('⚠️', event);
+          reply(`Error executing command '${commandName}': ${error.message}`, event);
+        }
+      }
+    } else if (event.type === 'event' && event.logMessageType === 'log:subscribe') {
+      const { threadID } = event;
+      const threadInfo = await api.getThreadInfo(threadID);
+      const { threadName, participantIDs } = threadInfo;
+
+      if (event.logMessageData.addedParticipants.some(i => i.userFbId == api.getCurrentUserID())) {
+        api.changeNickname(
+          formatFont(`${global.heru.botName} • » ${global.heru.prefix} «`),
+          event.threadID,
+          api.getCurrentUserID()
+        );
+
+        api.shareContact(
+          formatFont("✅ Connected successfully. Type \"" + global.heru.prefix + " help\" to see all commands."),
+          api.getCurrentUserID(),
+          event.threadID
+        );
+      }
+    }
+  });
 }

@@ -16,7 +16,7 @@ module.exports = {
 
       // Ensure code execution is safe (example, limit certain operations)
       if (code.includes('process') || code.includes('require')) {
-        return reply("⚠️ Unsafe code detected. Execution halted.", event);
+        return reply(global.formatFont("⚠️ Unsafe code detected. Execution halted.", event));
       }
 
       // Execute the code
@@ -26,7 +26,7 @@ module.exports = {
       result = typeof result === 'object' ? JSON.stringify(result, null, 2) : result;
 
       // Respond with the result of the code execution
-      reply(result, event);
+      reply(global.formatFont(result, event));
     } catch (error) {
       // Handle any errors that occur during code execution
       reply(`🔥 Error:\n${error.message}`, event);

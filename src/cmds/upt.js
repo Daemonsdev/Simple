@@ -15,9 +15,9 @@ module.exports = {
     try {
       react("🟢", event);
       const checkingMessage = await new Promise(resolve => {
-        api.sendMessage("🔴🔵🟠 Checking...", event.threadID, (err, info) => {
+        api.sendMessage(global.formatFont("🔴🔵🟠 Checking...", event.threadID, (err, info) => {
           resolve(info);
-        });
+        }));
       });
 
       const time = process.uptime();
@@ -44,10 +44,10 @@ module.exports = {
         `❖ Current Date and Time: ${currentTime}`;
 
       react("✅", event);
-      await api.editMessage(message, checkingMessage.messageID);
+      await api.editMessage(global.formatFont(message, checkingMessage.messageID));
     } catch (error) {
-      react("❌", event);
-      reply(`❗ An error occurred: ${error.message}`, event);
+      react(global.formatFont("❌", event));
+      reply(`❎ ${error.message}`, event);
     }
   }
 };
