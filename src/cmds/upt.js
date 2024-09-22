@@ -15,9 +15,9 @@ module.exports = {
     try {
       react("🟢", event);
       const checkingMessage = await new Promise(resolve => {
-        api.sendMessage(global.formatFont("🔴🔵🟠 Checking...", event.threadID, (err, info) => {
+        api.sendMessage(global.formatFont("🔴🔵🟠 Checking..."), event.threadID, (err, info) => {
           resolve(info);
-        }));
+        });
       });
 
       const time = process.uptime();
@@ -35,7 +35,7 @@ module.exports = {
       const currentTime = moment().tz("Asia/Manila").format("MMMM Do YYYY, h:mm:ss A");
 
       const message = `Bot has been working for ${hours} hour(s), ${minutes} minute(s), ${seconds} second(s).\n\n` +
-        `❖ Cpu usage: ${cpuUsage.toFixed(2)}%\n` +
+        `❖ CPU usage: ${cpuUsage.toFixed(2)}%\n` +
         `❖ RAM usage: ${ramUsage.toFixed(2)} MB\n` +
         `❖ Cores: ${cores}\n` +
         `❖ Ping: ${ping}ms\n` +
@@ -44,10 +44,10 @@ module.exports = {
         `❖ Current Date and Time: ${currentTime}`;
 
       react("✅", event);
-      await api.editMessage(global.formatFont(message, checkingMessage.messageID));
+      await api.editMessage(global.formatFont(message), checkingMessage.messageID);
     } catch (error) {
-      react(global.formatFont("❌", event));
-      reply(`❎ ${error.message}`, event);
+      react("❌", event);
+      reply(global.formatFont(`❎ ${error.message}`), event);
     }
   }
 };

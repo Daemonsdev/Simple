@@ -30,9 +30,8 @@ module.exports = {
     if (isNaN(modelIndex) || modelIndex < 0 || modelIndex >= models.length || !question) {
       react("⚠️", event);
       return reply(global.formatFont(
-        `Usage: modelai [model_number] [question]\nAvailable models:\n━━━━━━━━━━━━━━━\n${models.map((model, i) => `${i + 1}. ${model}`).join('\n')}`,
-        event
-      ));
+        `Usage: modelai [model_number] [question]\nAvailable models:\n━━━━━━━━━━━━━━━\n${models.map((model, i) => `${i + 1}. ${model}`).join('\n')}`
+      ), event);
     }
 
     const selectedModel = models[modelIndex];
@@ -41,9 +40,9 @@ module.exports = {
       react("⏳", event);
 
       const searchingMessage = await new Promise(resolve => {
-        api.sendMessage(global.formatFont("⏳ Searching...", event.threadID, (err, info) => {
+        api.sendMessage(global.formatFont("⏳ Searching..."), event.threadID, (err, info) => {
           resolve(info);
-        }));
+        });
       });
 
       const apiUrl = `https://hiroshi-api.onrender.com/ai/xyz?ask=${encodeURIComponent(question)}&model=${encodeURIComponent(selectedModel)}`;
@@ -59,7 +58,6 @@ module.exports = {
 
     } catch (error) {
       react("⚠️", event);
-
       await api.editMessage(global.formatFont(
         `❌ ${error.message}`,
         searchingMessage.messageID

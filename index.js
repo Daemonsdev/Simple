@@ -5,7 +5,6 @@ require('./utils/index');
 const config = require('./config.json');
 const text = require('fontstyles');
 
-// Define available font styles
 const font = {
   thin: msg => text.thin(msg),
   italic: msg => text.italic(msg),
@@ -19,7 +18,6 @@ const font = {
   origin: msg => text.origin(msg),
 };
 
-
 let userFontSettings = { enabled: true, currentFont: 'thin' };
 
 function formatFont(msg) {
@@ -30,7 +28,7 @@ function formatFont(msg) {
 }
 
 global.formatFont = formatFont;
-// Load appstate for login
+
 let appstate;
 try {
   appstate = require('./appstate.json');
@@ -41,7 +39,6 @@ try {
 
 const logger = require('./utils/logger');
 
-// Global settings for Heru bot
 global.heru = {
   ENDPOINT: "https://deku-rest-api.gleeze.com",
   admin: new Set(config.ADMINBOT),
@@ -49,7 +46,6 @@ global.heru = {
   botName: config.BOTNAME
 };
 
-// Load commands
 const commands = {};
 const commandPath = path.join(__dirname, 'src', 'cmds');
 try {
@@ -69,8 +65,7 @@ try {
   logger.warn(formatFont(`Error reading command directory: ${err.message}`));
 }
 
-// FCA login
-const login = require('fca-kaito');
+const login = require('fca-deku');
 login({ appState: appstate }, (err, api) => {
   if (err) {
     console.error(formatFont('Error logging in:'), err);
@@ -79,7 +74,6 @@ login({ appState: appstate }, (err, api) => {
   startBot(api);
 });
 
-// Start bot and listen to messages
 function startBot(api) {
   console.log(formatFont('Successfully logged in!'));
   
@@ -109,7 +103,6 @@ function startBot(api) {
         api.sendMessage(formatFont(text), event.threadID, event.messageID);
       };
 
-      // Handle font commands
       if (!command) {
         if (commandName === 'font') {
           if (args[0] === 'list') {
@@ -131,7 +124,6 @@ function startBot(api) {
           return reply('Invalid font command. Usage: font list, font change <fontName>, font enable, or font disable.', event);
         }
 
-        // Handle prefix information
         if (message === 'prefix') {
           return reply(`⚙️ My prefix is: 》 ${global.heru.prefix} 《`, event);
         }
@@ -140,7 +132,6 @@ function startBot(api) {
         }
       }
 
-      // Handle valid commands
       if (command) {
         if (command.config.prefix !== false && !isPrefixed) {
           react('⚠️', event);
@@ -155,7 +146,6 @@ function startBot(api) {
           return reply(`You are not authorized to use the command "${commandName}".`, event);
         }
 
-        // Handle command cooldown
         if (!global.handle) global.handle = {};
         if (!global.handle.cooldown) global.handle.cooldown = new Map();
 
@@ -173,7 +163,6 @@ function startBot(api) {
 
         timeStamps.set(event.senderID, dateNow);
 
-        // Execute the command
         try {
           await command.run(api, event, args, reply, react);
         } catch (error) {

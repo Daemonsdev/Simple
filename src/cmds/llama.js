@@ -10,7 +10,7 @@ module.exports = {
         prefix: false
     },
     run: async (api, event, args, reply, react) => {
-        const query = args.length > 0 ? args.join(" ") : null;
+        const query = args.join(" ");
         if (!query) {
             react("⚠️", event);
             return reply(global.formatFont("Please provide a query."), event);
@@ -19,17 +19,18 @@ module.exports = {
         try {
             react("⏳", event);
             const searchingMessage = await new Promise(resolve => {
-                api.sendMessage(global.formatFont("⏳ Searching...", event.threadID, (err, info) => {
+                api.sendMessage(global.formatFont("⏳ Searching..."), event.threadID, (err, info) => {
                     resolve(info);
-                }));
+                });
             });
 
             const apiUrl = `https://deku-rest-api.gleeze.com/api/llama-3-70b?q=${encodeURIComponent(query)}`;
             const response = await axios.get(apiUrl);
             const answer = response.data?.result || "I couldn't fetch a response from LLaMA.";
+
             react("✅", event);
             await api.editMessage(
-                global.formatFont(`Llama Ai\n━━━━━━━━━━━━━━━\n${answer}`),
+                global.formatFont(`LLaMA AI\n━━━━━━━━━━━━━━━\n${answer}`),
                 searchingMessage.messageID
             );
 
